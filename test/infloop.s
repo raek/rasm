@@ -1,2 +1,0 @@
-RESET:
-    jmp     RESET

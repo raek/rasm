@@ -1,7 +1,19 @@
 import argparse
 import collections
+import enum
 import re
 import struct
+
+
+class ArgType(enum.Enum):
+    ADDR = 0
+    ADDR_OFFSET = 1
+
+
+INSTRUCTIONS = {
+    "rjmp":  ("1100 aaaa aaaa aaaa",                     ArgType.ADDR_OFFSET),
+    "jmp":   ("1001 010a aaaa 110a aaaa aaaa aaaa aaaa", ArgType.ADDR),
+}
 
 
 class Label(collections.namedtuple("Label", ["symbol", "weak"])):
@@ -10,13 +22,40 @@ class Label(collections.namedtuple("Label", ["symbol", "weak"])):
         return super(Label, cls).__new__(cls, symbol, weak)
 
 
-class Insn(collections.namedtuple("Insn", ["op", "arg", "code", "words"])):
+class Insn(collections.namedtuple("Insn", ["op", "arg", "bit_pattern", "size", "arg_type"])):
 
     def __new__(cls, op, arg):
-        if op == "jmp":
-            return super(Insn, cls).__new__(cls, op, arg, 0x940C, 2)
+        if op in INSTRUCTIONS:
+            bit_pattern, arg_type = INSTRUCTIONS[op]
+            size = len(bit_pattern) // 16
+            return super(Insn, cls).__new__(cls, op, arg, bit_pattern, size, arg_type)
         else:
             raise Exception("Unknown instruction: " + op)
+
+    def words(self):
+        arg = self.arg
+        words = []
+        word = 0
+        i = 0
+        for bit_type in reversed(self.bit_pattern):
+            if bit_type == " ":
+                continue
+            elif bit_type == "0":
+                bit = 0
+            elif bit_type == "1":
+                bit = 1
+            elif bit_type == "a":
+                bit = arg & 1
+                arg >>= 1
+            else:
+                raise ValueError(bit_type)
+            word |= bit << i
+            i += 1
+            if i == 16:
+                words.insert(0, word)
+                i = 0
+                word = 0
+        return words
 
 
 def main():
@@ -84,7 +123,7 @@ def scan(program):
                     raise Exception("Label mutliply-defined: " + stmt.symbol)
                 labels[stmt.symbol] = addr
         elif isinstance(stmt, Insn):
-            addr += stmt.words
+            addr += stmt.size
         else:
             raise ValueError(stmt)
     result = dict(weak_labels)
@@ -94,26 +133,29 @@ def scan(program):
 
 
 def fix(program, labels):
+    addr = 0
     for stmt in program:
         if isinstance(stmt, Label):
             pass
         elif isinstance(stmt, Insn):
-            yield stmt._replace(arg=eval_addr(stmt.arg, labels))
+            addr += stmt.size
+            yield stmt._replace(arg=eval_arg(stmt.arg_type, stmt.arg, labels, addr))
         else:
             raise ValueError(stmt)
 
 
-def eval_addr(expr, labels):
-    if isinstance(expr, int):
-        return expr
-    elif isinstance(expr, str):
-        return labels[expr]
+def eval_arg(arg_type, arg, labels, current_addr):
+    dest_addr = labels[arg]
+    if arg_type == ArgType.ADDR:
+        return dest_addr
+    elif arg_type == ArgType.ADDR_OFFSET:
+        return (dest_addr - current_addr) % 0x10000
 
 
 def write_program(outfile, insns):
     for insn in insns:
-        write_word(outfile, insn.code)
-        write_word(outfile, insn.arg)
+        for word in insn.words():
+            write_word(outfile, word)
 
 
 def write_word(outfile, word):
