@@ -6,13 +6,34 @@ import struct
 
 
 class ArgType(enum.Enum):
-    ADDR = 0
-    ADDR_OFFSET = 1
+    NONE = 0
+    ADDR = 1
+    ADDR_OFFSET = 2
+    IO = 3
+    BIT = 4
 
 
 INSTRUCTIONS = {
-    "rjmp":  ("1100 aaaa aaaa aaaa",                     ArgType.ADDR_OFFSET),
-    "jmp":   ("1001 010a aaaa 110a aaaa aaaa aaaa aaaa", ArgType.ADDR),
+    "cbi":   ("1001 1000 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
+    "clc":   ("1001 0100 1000 1000",                     ArgType.NONE,        ArgType.NONE),
+    "clh":   ("1001 0100 1101 1000",                     ArgType.NONE,        ArgType.NONE),
+    "cli":   ("1001 0100 1111 1000",                     ArgType.NONE,        ArgType.NONE),
+    "cln":   ("1001 0100 1010 1000",                     ArgType.NONE,        ArgType.NONE),
+    "cls":   ("1001 0100 1100 1000",                     ArgType.NONE,        ArgType.NONE),
+    "clt":   ("1001 0100 1110 1000",                     ArgType.NONE,        ArgType.NONE),
+    "clv":   ("1001 0100 1011 1000",                     ArgType.NONE,        ArgType.NONE),
+    "clz":   ("1001 0100 1001 1000",                     ArgType.NONE,        ArgType.NONE),
+    "rjmp":  ("1100 aaaa aaaa aaaa",                     ArgType.ADDR_OFFSET, ArgType.NONE),
+    "sbi":   ("1001 1010 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
+    "sec":   ("1001 0100 0000 1000",                     ArgType.NONE,        ArgType.NONE),
+    "seh":   ("1001 0100 0101 1000",                     ArgType.NONE,        ArgType.NONE),
+    "sei":   ("1001 0100 0111 1000",                     ArgType.NONE,        ArgType.NONE),
+    "sen":   ("1001 0100 0010 1000",                     ArgType.NONE,        ArgType.NONE),
+    "ses":   ("1001 0100 0100 1000",                     ArgType.NONE,        ArgType.NONE),
+    "set":   ("1001 0100 0110 1000",                     ArgType.NONE,        ArgType.NONE),
+    "sev":   ("1001 0100 0011 1000",                     ArgType.NONE,        ArgType.NONE),
+    "sez":   ("1001 0100 0001 1000",                     ArgType.NONE,        ArgType.NONE),
+    "jmp":   ("1001 010a aaaa 110a aaaa aaaa aaaa aaaa", ArgType.ADDR,        ArgType.NONE),
 }
 
 
@@ -22,18 +43,19 @@ class Label(collections.namedtuple("Label", ["symbol", "weak"])):
         return super(Label, cls).__new__(cls, symbol, weak)
 
 
-class Insn(collections.namedtuple("Insn", ["op", "arg", "bit_pattern", "size", "arg_type"])):
+class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", "size", "arg1_type", "arg2_type"])):
 
-    def __new__(cls, op, arg):
+    def __new__(cls, op, arg1=None, arg2=None):
         if op in INSTRUCTIONS:
-            bit_pattern, arg_type = INSTRUCTIONS[op]
+            bit_pattern, arg1_type, arg2_type = INSTRUCTIONS[op]
             size = len(bit_pattern) // 16
-            return super(Insn, cls).__new__(cls, op, arg, bit_pattern, size, arg_type)
+            return super(Insn, cls).__new__(cls, op, arg1, arg2, bit_pattern, size, arg1_type, arg2_type)
         else:
             raise Exception("Unknown instruction: " + op)
 
     def words(self):
-        arg = self.arg
+        arg1 = self.arg1
+        arg2 = self.arg2
         words = []
         word = 0
         i = 0
@@ -45,8 +67,11 @@ class Insn(collections.namedtuple("Insn", ["op", "arg", "bit_pattern", "size", "
             elif bit_type == "1":
                 bit = 1
             elif bit_type == "a":
-                bit = arg & 1
-                arg >>= 1
+                bit = arg1 & 1
+                arg1 >>= 1
+            elif bit_type == "b":
+                bit = arg2 & 1
+                arg2 >>= 1
             else:
                 raise ValueError(bit_type)
             word |= bit << i
@@ -83,9 +108,9 @@ def parse_line(line):
     m = re.match(r"(?P<label>\w+):\s*$", line)
     if m:
         return Label(m.group("label"))
-    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg>\w+))?\s*$", line)
+    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>\w+)(,\s*(?P<arg2>\w+))?)?\s*$", line)
     if m:
-        return Insn(*m.group("op", "arg"))
+        return Insn(*m.group("op", "arg1", "arg2"))
     else:
         raise Exception("syntax error: " + line)
 
@@ -139,17 +164,29 @@ def fix(program, labels):
             pass
         elif isinstance(stmt, Insn):
             addr += stmt.size
-            yield stmt._replace(arg=eval_arg(stmt.arg_type, stmt.arg, labels, addr))
+            arg1 = eval_arg(stmt.arg1_type, stmt.arg1, labels, addr)
+            arg2 = eval_arg(stmt.arg2_type, stmt.arg2, labels, addr)
+            yield stmt._replace(arg1=arg1, arg2=arg2)
         else:
             raise ValueError(stmt)
 
 
 def eval_arg(arg_type, arg, labels, current_addr):
-    dest_addr = labels[arg]
+    if arg_type == ArgType.NONE:
+        assert arg is None
+        return None
     if arg_type == ArgType.ADDR:
+        dest_addr = labels[arg]
         return dest_addr
     elif arg_type == ArgType.ADDR_OFFSET:
+        dest_addr = labels[arg]
         return (dest_addr - current_addr) % 0x10000
+    elif arg_type == ArgType.IO:
+        return int(arg)
+    elif arg_type == ArgType.BIT:
+        return int(arg)
+    else:
+        raise ValueError(arg_type)
 
 
 def write_program(outfile, insns):
