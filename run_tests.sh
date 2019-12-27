@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -u
+export LANG=C
 
 mkdir -p test_out
 
