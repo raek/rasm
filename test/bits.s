@@ -1,4 +1,9 @@
 RESET:
+    asr     r27
+    bclr    5
+    bld     r27, 5
+    bset    5
+    bst     r27, 5
     cbi     31, 0
     clc
     clh
@@ -8,6 +13,10 @@ RESET:
     clt
     clv
     clz
+    lsl     r27
+    lsr     r27
+    rol     r27
+    ror     r27
     sbi     31, 0
     sec
     seh
@@ -17,4 +26,5 @@ RESET:
     set
     sev
     sez
+    swap    r27
     jmp     RESET

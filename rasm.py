@@ -11,9 +11,15 @@ class ArgType(enum.Enum):
     ADDR_OFFSET = 2
     IO = 3
     BIT = 4
+    REG = 5
 
 
 INSTRUCTIONS = {
+    "asr":   ("1001 010a aaaa 0101",                     ArgType.REG,         ArgType.NONE),
+    "bclr":  ("1001 0100 1aaa 1000",                     ArgType.BIT,         ArgType.NONE),
+    "bld":   ("1111 100a aaaa 0bbb",                     ArgType.REG,         ArgType.BIT),
+    "bset":  ("1001 0100 0aaa 1000",                     ArgType.BIT,         ArgType.NONE),
+    "bst":   ("1111 101a aaaa 0bbb",                     ArgType.REG,         ArgType.BIT),
     "cbi":   ("1001 1000 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
     "clc":   ("1001 0100 1000 1000",                     ArgType.NONE,        ArgType.NONE),
     "clh":   ("1001 0100 1101 1000",                     ArgType.NONE,        ArgType.NONE),
@@ -23,7 +29,11 @@ INSTRUCTIONS = {
     "clt":   ("1001 0100 1110 1000",                     ArgType.NONE,        ArgType.NONE),
     "clv":   ("1001 0100 1011 1000",                     ArgType.NONE,        ArgType.NONE),
     "clz":   ("1001 0100 1001 1000",                     ArgType.NONE,        ArgType.NONE),
+    "lsl":   ("0000 11Aa aaaa AAAA",                     ArgType.REG,         ArgType.NONE),
+    "lsr":   ("1001 010a aaaa 0110",                     ArgType.REG,         ArgType.NONE),
     "rjmp":  ("1100 aaaa aaaa aaaa",                     ArgType.ADDR_OFFSET, ArgType.NONE),
+    "rol":   ("0001 11Aa aaaa AAAA",                     ArgType.REG,         ArgType.NONE),
+    "ror":   ("1001 010a aaaa 0111",                     ArgType.REG,         ArgType.NONE),
     "sbi":   ("1001 1010 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
     "sec":   ("1001 0100 0000 1000",                     ArgType.NONE,        ArgType.NONE),
     "seh":   ("1001 0100 0101 1000",                     ArgType.NONE,        ArgType.NONE),
@@ -33,6 +43,7 @@ INSTRUCTIONS = {
     "set":   ("1001 0100 0110 1000",                     ArgType.NONE,        ArgType.NONE),
     "sev":   ("1001 0100 0011 1000",                     ArgType.NONE,        ArgType.NONE),
     "sez":   ("1001 0100 0001 1000",                     ArgType.NONE,        ArgType.NONE),
+    "swap":  ("1001 010a aaaa 0010",                     ArgType.REG,         ArgType.NONE),
     "jmp":   ("1001 010a aaaa 110a aaaa aaaa aaaa aaaa", ArgType.ADDR,        ArgType.NONE),
 }
 
@@ -56,6 +67,7 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
     def words(self):
         arg1 = self.arg1
         arg2 = self.arg2
+        arg1_dupe = self.arg1
         words = []
         word = 0
         i = 0
@@ -72,6 +84,9 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
             elif bit_type == "b":
                 bit = arg2 & 1
                 arg2 >>= 1
+            elif bit_type == "A":
+                bit = arg1_dupe & 1
+                arg1_dupe >>= 1
             else:
                 raise ValueError(bit_type)
             word |= bit << i
@@ -185,6 +200,9 @@ def eval_arg(arg_type, arg, labels, current_addr):
         return int(arg)
     elif arg_type == ArgType.BIT:
         return int(arg)
+    elif arg_type == ArgType.REG:
+        assert arg.startswith("r")
+        return int(arg[1:])
     else:
         raise ValueError(arg_type)
 
