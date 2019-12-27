@@ -14,37 +14,47 @@ class ArgType(enum.Enum):
     REG = 5
 
 
+ARG_TYPE_CHARS = {
+    " ": ArgType.NONE,
+    "A": ArgType.ADDR,
+    "a": ArgType.ADDR_OFFSET,
+    "i": ArgType.IO,
+    "b": ArgType.BIT,
+    "r": ArgType.REG,
+}
+
+
 INSTRUCTIONS = {
-    "asr":   ("1001 010a aaaa 0101",                     ArgType.REG,         ArgType.NONE),
-    "bclr":  ("1001 0100 1aaa 1000",                     ArgType.BIT,         ArgType.NONE),
-    "bld":   ("1111 100a aaaa 0bbb",                     ArgType.REG,         ArgType.BIT),
-    "bset":  ("1001 0100 0aaa 1000",                     ArgType.BIT,         ArgType.NONE),
-    "bst":   ("1111 101a aaaa 0bbb",                     ArgType.REG,         ArgType.BIT),
-    "cbi":   ("1001 1000 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
-    "clc":   ("1001 0100 1000 1000",                     ArgType.NONE,        ArgType.NONE),
-    "clh":   ("1001 0100 1101 1000",                     ArgType.NONE,        ArgType.NONE),
-    "cli":   ("1001 0100 1111 1000",                     ArgType.NONE,        ArgType.NONE),
-    "cln":   ("1001 0100 1010 1000",                     ArgType.NONE,        ArgType.NONE),
-    "cls":   ("1001 0100 1100 1000",                     ArgType.NONE,        ArgType.NONE),
-    "clt":   ("1001 0100 1110 1000",                     ArgType.NONE,        ArgType.NONE),
-    "clv":   ("1001 0100 1011 1000",                     ArgType.NONE,        ArgType.NONE),
-    "clz":   ("1001 0100 1001 1000",                     ArgType.NONE,        ArgType.NONE),
-    "lsl":   ("0000 11Aa aaaa AAAA",                     ArgType.REG,         ArgType.NONE),
-    "lsr":   ("1001 010a aaaa 0110",                     ArgType.REG,         ArgType.NONE),
-    "rjmp":  ("1100 aaaa aaaa aaaa",                     ArgType.ADDR_OFFSET, ArgType.NONE),
-    "rol":   ("0001 11Aa aaaa AAAA",                     ArgType.REG,         ArgType.NONE),
-    "ror":   ("1001 010a aaaa 0111",                     ArgType.REG,         ArgType.NONE),
-    "sbi":   ("1001 1010 aaaa abbb",                     ArgType.IO,          ArgType.BIT),
-    "sec":   ("1001 0100 0000 1000",                     ArgType.NONE,        ArgType.NONE),
-    "seh":   ("1001 0100 0101 1000",                     ArgType.NONE,        ArgType.NONE),
-    "sei":   ("1001 0100 0111 1000",                     ArgType.NONE,        ArgType.NONE),
-    "sen":   ("1001 0100 0010 1000",                     ArgType.NONE,        ArgType.NONE),
-    "ses":   ("1001 0100 0100 1000",                     ArgType.NONE,        ArgType.NONE),
-    "set":   ("1001 0100 0110 1000",                     ArgType.NONE,        ArgType.NONE),
-    "sev":   ("1001 0100 0011 1000",                     ArgType.NONE,        ArgType.NONE),
-    "sez":   ("1001 0100 0001 1000",                     ArgType.NONE,        ArgType.NONE),
-    "swap":  ("1001 010a aaaa 0010",                     ArgType.REG,         ArgType.NONE),
-    "jmp":   ("1001 010a aaaa 110a aaaa aaaa aaaa aaaa", ArgType.ADDR,        ArgType.NONE),
+    "asr":   ("r ", "1001 010a aaaa 0101"),
+    "bclr":  ("b ", "1001 0100 1aaa 1000"),
+    "bld":   ("rb", "1111 100a aaaa 0bbb"),
+    "bset":  ("b ", "1001 0100 0aaa 1000"),
+    "bst":   ("rb", "1111 101a aaaa 0bbb"),
+    "cbi":   ("ib", "1001 1000 aaaa abbb"),
+    "clc":   ("  ", "1001 0100 1000 1000"),
+    "clh":   ("  ", "1001 0100 1101 1000"),
+    "cli":   ("  ", "1001 0100 1111 1000"),
+    "cln":   ("  ", "1001 0100 1010 1000"),
+    "cls":   ("  ", "1001 0100 1100 1000"),
+    "clt":   ("  ", "1001 0100 1110 1000"),
+    "clv":   ("  ", "1001 0100 1011 1000"),
+    "clz":   ("  ", "1001 0100 1001 1000"),
+    "lsl":   ("r ", "0000 11Aa aaaa AAAA"),
+    "lsr":   ("r ", "1001 010a aaaa 0110"),
+    "rjmp":  ("a ", "1100 aaaa aaaa aaaa"),
+    "rol":   ("r ", "0001 11Aa aaaa AAAA"),
+    "ror":   ("r ", "1001 010a aaaa 0111"),
+    "sbi":   ("ib", "1001 1010 aaaa abbb"),
+    "sec":   ("  ", "1001 0100 0000 1000"),
+    "seh":   ("  ", "1001 0100 0101 1000"),
+    "sei":   ("  ", "1001 0100 0111 1000"),
+    "sen":   ("  ", "1001 0100 0010 1000"),
+    "ses":   ("  ", "1001 0100 0100 1000"),
+    "set":   ("  ", "1001 0100 0110 1000"),
+    "sev":   ("  ", "1001 0100 0011 1000"),
+    "sez":   ("  ", "1001 0100 0001 1000"),
+    "swap":  ("r ", "1001 010a aaaa 0010"),
+    "jmp":   ("A ", "1001 010a aaaa 110a aaaa aaaa aaaa aaaa"),
 }
 
 
@@ -58,7 +68,9 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
 
     def __new__(cls, op, arg1=None, arg2=None):
         if op in INSTRUCTIONS:
-            bit_pattern, arg1_type, arg2_type = INSTRUCTIONS[op]
+            arg_types, bit_pattern = INSTRUCTIONS[op]
+            arg1_type = ARG_TYPE_CHARS[arg_types[0]]
+            arg2_type = ARG_TYPE_CHARS[arg_types[1]]
             size = len(bit_pattern) // 16
             return super(Insn, cls).__new__(cls, op, arg1, arg2, bit_pattern, size, arg1_type, arg2_type)
         else:
