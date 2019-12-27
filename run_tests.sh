@@ -21,3 +21,4 @@ function check() {
 check empty
 check jumps
 check bits
+check mcuctrl
