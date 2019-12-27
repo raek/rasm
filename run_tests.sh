@@ -18,6 +18,7 @@ function check() {
     colordiff -u test/"$1"_dis.txt test_out/"$1"_dis.txt || error "output not correct"
 }
 
+check syntax
 check empty
 check jumps
 check bits

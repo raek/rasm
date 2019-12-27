@@ -132,18 +132,22 @@ def main():
 def assemble(infile):
     for line in infile:
         line = line.rstrip("\n")
-        yield parse_line(line)
+        stmt = parse_line(line)
+        if stmt:
+            yield stmt
 
 
 def parse_line(line):
-    m = re.match(r"(?P<label>\w+):\s*$", line)
+    m = re.match(r"(?P<label>\w+):\s*(;.*)?$", line)
     if m:
         return Label(m.group("label"))
-    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>\w+)(,\s*(?P<arg2>\w+))?)?\s*$", line)
+    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>\w+)(,\s*(?P<arg2>\w+))?)?\s*(;.*)?$", line)
     if m:
         return Insn(*m.group("op", "arg1", "arg2"))
-    else:
-        raise Exception("syntax error: " + line)
+    m = re.match(r"\s*(;.*)?$", line)
+    if m:
+        return None
+    raise Exception("syntax error: " + line)
 
 
 def emit_interrupt_vector_table():
