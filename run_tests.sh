@@ -18,3 +18,4 @@ function check() {
 }
 
 check empty
+check infloop
