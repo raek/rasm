@@ -26,12 +26,25 @@ ARG_TYPE_CHARS = {
 
 INSTRUCTIONS = {
     "nop":   ("  ", "0000 0000 0000 0000"),
+    "sbc":   ("rr", "0000 10ba aaaa bbbb"),
+    "add":   ("rr", "0000 11ba aaaa bbbb"),
     "lsl":   ("r ", "0000 11Aa aaaa AAAA"),
+    "sub":   ("rr", "0001 10ba aaaa bbbb"),
+    "adc":   ("rr", "0001 11ba aaaa bbbb"),
     "rol":   ("r ", "0001 11Aa aaaa AAAA"),
+    "and":   ("rr", "0010 00ba aaaa bbbb"),
+    "tst":   ("r ", "0010 00Aa aaaa AAAA"),
+    "eor":   ("rr", "0010 01ba aaaa bbbb"),
+    "clr":   ("r ", "0010 01Aa aaaa AAAA"),
+    "or":    ("rr", "0010 10ba aaaa bbbb"),
+    "com":   ("r ", "1001 010a aaaa 0000"),
+    "neg":   ("r ", "1001 010a aaaa 0001"),
     "swap":  ("r ", "1001 010a aaaa 0010"),
+    "inc":   ("r ", "1001 010a aaaa 0011"),
     "asr":   ("r ", "1001 010a aaaa 0101"),
     "lsr":   ("r ", "1001 010a aaaa 0110"),
     "ror":   ("r ", "1001 010a aaaa 0111"),
+    "dec":   ("r ", "1001 010a aaaa 1010"),
     "jmp":   ("A ", "1001 010a aaaa 110a aaaa aaaa aaaa aaaa"),
     "bset":  ("b ", "1001 0100 0aaa 1000"),
     "sec":   ("  ", "1001 0100 0000 1000"),
@@ -59,6 +72,7 @@ INSTRUCTIONS = {
     "rjmp":  ("a ", "1100 aaaa aaaa aaaa"),
     "bld":   ("rb", "1111 100a aaaa 0bbb"),
     "bst":   ("rb", "1111 101a aaaa 0bbb"),
+    "ser":   ("r ", "1110 1111 aaaa 1111"),
 }
 
 

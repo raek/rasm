@@ -23,3 +23,4 @@ check empty
 check jumps
 check bits
 check mcuctrl
+check arithlog
