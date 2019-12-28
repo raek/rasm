@@ -6,16 +6,17 @@ import struct
 
 
 class ArgType(enum.Enum):
-    NONE          = 0
-    ADDR          = 1
-    ADDR_OFFSET   = 2
-    IO            = 3
-    BIT           = 4
-    REG32         = 5 # r0-r31
-    REG16         = 6 # r16-r31
-    REG8          = 7 # r16-r23
-    IMMEDIATE     = 8
-    IMMEDIATE_INV = 9
+    NONE          =  0
+    ADDR          =  1
+    ADDR_OFFSET   =  2
+    IO            =  3
+    BIT           =  4
+    REG32         =  5 # r0-r31
+    REG16         =  6 # r16-r31
+    REG8          =  7 # r16-r23
+    REG_PAIR4     =  8 # r25:r24, r27:26, r29:r28, r31:r30
+    IMMEDIATE     =  9
+    IMMEDIATE_INV = 10
 
 
 ARG_TYPE_CHARS = {
@@ -27,6 +28,7 @@ ARG_TYPE_CHARS = {
     "r": ArgType.REG32,
     "h": ArgType.REG16,
     "H": ArgType.REG8,
+    "P": ArgType.REG_PAIR4,
     "k": ArgType.IMMEDIATE,
     "K": ArgType.IMMEDIATE_INV,
 }
@@ -86,6 +88,8 @@ INSTRUCTIONS = {
     "sleep":  ("  ", "1001 0101 1000 1000"),
     "break":  ("  ", "1001 0101 1001 1000"),
     "wdr":    ("  ", "1001 0101 1010 1000"),
+    "adiw":   ("Pk", "1001 0110 bbaa bbbb"),
+    "sbiw":   ("Pk", "1001 0111 bbaa bbbb"),
     "cbi":    ("ib", "1001 1000 aaaa abbb"),
     "sbi":    ("ib", "1001 1010 aaaa abbb"),
     "mul":    ("rr", "1001 11ba aaaa bbbb"),
@@ -175,7 +179,7 @@ def parse_line(line):
     m = re.match(r"(?P<label>\w+):\s*(;.*)?$", line)
     if m:
         return Label(m.group("label"))
-    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>\w+)(,\s*(?P<arg2>\w+))?)?\s*(;.*)?$", line)
+    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>[\w:]+)(,\s*(?P<arg2>[\w:]+))?)?\s*(;.*)?$", line)
     if m:
         return Insn(*m.group("op", "arg1", "arg2"))
     m = re.match(r"\s*(;.*)?$", line)
@@ -269,6 +273,14 @@ def eval_arg(arg_type, arg, labels, current_addr):
         reg = int(arg[1:])
         assert reg >= 16 and reg <= 23
         return reg - 16
+    elif arg_type == ArgType.REG_PAIR4:
+        m = re.match(r"r(\d+):r(\d+)", arg)
+        assert m
+        hreg = int(m.group(1))
+        lreg = int(m.group(2))
+        assert hreg == lreg + 1
+        assert lreg in [24, 26, 28, 30]
+        return (lreg - 24) >> 1
     elif arg_type == ArgType.IMMEDIATE:
         val = int(arg)
         assert val >= 0 and val <= 255
