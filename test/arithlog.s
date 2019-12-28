@@ -3,8 +3,8 @@ RESET:
     add     r0, r31
 ;    adiw    r25:r24, 63
     and     r0, r31
-;    andi    r0, 255
-;    cbr     r16, 255
+    andi    r16, 255
+    cbr     r16, 255
     clr     r0
     com     r0
     dec     r0
@@ -18,13 +18,13 @@ RESET:
 ;    mulsu   r16, r23
     neg     r0
     or      r0, r31
-;    ori     r0, 255
+    ori     r16, 255
     sbc     r0, r31
-;    sbci    r0, 255
+    sbci    r16, 255
 ;    sbiw    r25:r24, 63
-;    sbr     r0, 255
+    sbr     r16, 255
     ser     r0
     sub     r0, r31
-;    subi    r0, 255
+    subi    r16, 255
     tst     r0
     jmp     RESET

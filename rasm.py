@@ -6,12 +6,15 @@ import struct
 
 
 class ArgType(enum.Enum):
-    NONE = 0
-    ADDR = 1
-    ADDR_OFFSET = 2
-    IO = 3
-    BIT = 4
-    REG = 5
+    NONE          = 0
+    ADDR          = 1
+    ADDR_OFFSET   = 2
+    IO            = 3
+    BIT           = 4
+    REG           = 5 # r0-r31
+    HIGH_REG      = 6 # r16-r31
+    IMMEDIATE     = 7
+    IMMEDIATE_INV = 8
 
 
 ARG_TYPE_CHARS = {
@@ -21,6 +24,9 @@ ARG_TYPE_CHARS = {
     "i": ArgType.IO,
     "b": ArgType.BIT,
     "r": ArgType.REG,
+    "h": ArgType.HIGH_REG,
+    "k": ArgType.IMMEDIATE,
+    "K": ArgType.IMMEDIATE_INV,
 }
 
 
@@ -37,6 +43,12 @@ INSTRUCTIONS = {
     "eor":   ("rr", "0010 01ba aaaa bbbb"),
     "clr":   ("r ", "0010 01Aa aaaa AAAA"),
     "or":    ("rr", "0010 10ba aaaa bbbb"),
+    "sbci":  ("hk", "0100 bbbb aaaa bbbb"),
+    "subi":  ("hk", "0101 bbbb aaaa bbbb"),
+    "ori":   ("hk", "0110 bbbb aaaa bbbb"),
+    "sbr":   ("hk", "0110 bbbb aaaa bbbb"),
+    "andi":  ("hk", "0111 bbbb aaaa bbbb"),
+    "cbr":   ("hK", "0111 bbbb aaaa bbbb"),
     "com":   ("r ", "1001 010a aaaa 0000"),
     "neg":   ("r ", "1001 010a aaaa 0001"),
     "swap":  ("r ", "1001 010a aaaa 0010"),
@@ -236,7 +248,23 @@ def eval_arg(arg_type, arg, labels, current_addr):
         return int(arg)
     elif arg_type == ArgType.REG:
         assert arg.startswith("r")
-        return int(arg[1:])
+        reg = int(arg[1:])
+        assert reg >= 0 and reg <= 31
+        return reg
+    elif arg_type == ArgType.HIGH_REG:
+        assert arg.startswith("r")
+        reg = int(arg[1:])
+        assert reg >= 16 and reg <= 31
+        return reg - 16
+    elif arg_type == ArgType.IMMEDIATE:
+        val = int(arg)
+        assert val >= 0 and val <= 255
+        return val
+    elif arg_type == ArgType.IMMEDIATE_INV:
+        val = int(arg)
+        assert val >= 0 and val <= 255
+        val = 255 - val
+        return val
     else:
         raise ValueError(arg_type)
 
