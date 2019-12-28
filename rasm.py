@@ -11,10 +11,11 @@ class ArgType(enum.Enum):
     ADDR_OFFSET   = 2
     IO            = 3
     BIT           = 4
-    REG           = 5 # r0-r31
-    HIGH_REG      = 6 # r16-r31
-    IMMEDIATE     = 7
-    IMMEDIATE_INV = 8
+    REG32         = 5 # r0-r31
+    REG16         = 6 # r16-r31
+    REG8          = 7 # r16-r23
+    IMMEDIATE     = 8
+    IMMEDIATE_INV = 9
 
 
 ARG_TYPE_CHARS = {
@@ -23,8 +24,9 @@ ARG_TYPE_CHARS = {
     "a": ArgType.ADDR_OFFSET,
     "i": ArgType.IO,
     "b": ArgType.BIT,
-    "r": ArgType.REG,
-    "h": ArgType.HIGH_REG,
+    "r": ArgType.REG32,
+    "h": ArgType.REG16,
+    "H": ArgType.REG8,
     "k": ArgType.IMMEDIATE,
     "K": ArgType.IMMEDIATE_INV,
 }
@@ -32,6 +34,11 @@ ARG_TYPE_CHARS = {
 
 INSTRUCTIONS = {
     "nop":   ("  ", "0000 0000 0000 0000"),
+    "muls":  ("hh", "0000 0010 aaaa bbbb"),
+    "mulsu": ("HH", "0000 0011 0aaa 0bbb"),
+    "fmulsu":("HH", "0000 0011 1aaa 1bbb"),
+    "fmul":  ("HH", "0000 0011 0aaa 1bbb"),
+    "fmuls": ("HH", "0000 0011 1aaa 0bbb"),
     "sbc":   ("rr", "0000 10ba aaaa bbbb"),
     "add":   ("rr", "0000 11ba aaaa bbbb"),
     "lsl":   ("r ", "0000 11Aa aaaa AAAA"),
@@ -81,6 +88,7 @@ INSTRUCTIONS = {
     "wdr":   ("  ", "1001 0101 1010 1000"),
     "cbi":   ("ib", "1001 1000 aaaa abbb"),
     "sbi":   ("ib", "1001 1010 aaaa abbb"),
+    "mul":   ("rr", "1001 11ba aaaa bbbb"),
     "rjmp":  ("a ", "1100 aaaa aaaa aaaa"),
     "bld":   ("rb", "1111 100a aaaa 0bbb"),
     "bst":   ("rb", "1111 101a aaaa 0bbb"),
@@ -246,15 +254,20 @@ def eval_arg(arg_type, arg, labels, current_addr):
         return int(arg)
     elif arg_type == ArgType.BIT:
         return int(arg)
-    elif arg_type == ArgType.REG:
+    elif arg_type == ArgType.REG32:
         assert arg.startswith("r")
         reg = int(arg[1:])
         assert reg >= 0 and reg <= 31
         return reg
-    elif arg_type == ArgType.HIGH_REG:
+    elif arg_type == ArgType.REG16:
         assert arg.startswith("r")
         reg = int(arg[1:])
         assert reg >= 16 and reg <= 31
+        return reg - 16
+    elif arg_type == ArgType.REG8:
+        assert arg.startswith("r")
+        reg = int(arg[1:])
+        assert reg >= 16 and reg <= 23
         return reg - 16
     elif arg_type == ArgType.IMMEDIATE:
         val = int(arg)

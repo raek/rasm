@@ -9,13 +9,13 @@ RESET:
     com     r0
     dec     r0
     eor     r0, r31
-;    fmul    r16, r23
-;    fmuls   r16, r23
-;    fmulsu  r16, r23
+    fmul    r16, r23
+    fmuls   r16, r23
+    fmulsu  r16, r23
     inc     r0
-;    mul     r0, r31
-;    muls    r16, r31
-;    mulsu   r16, r23
+    mul     r0, r31
+    muls    r16, r31
+    mulsu   r16, r23
     neg     r0
     or      r0, r31
     ori     r16, 255
