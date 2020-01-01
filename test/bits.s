@@ -1,4 +1,3 @@
-RESET:
     asr     r27
     bclr    5
     bld     r27, 5
@@ -27,4 +26,3 @@ RESET:
     sev
     sez
     swap    r27
-    jmp     RESET

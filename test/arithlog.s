@@ -1,4 +1,3 @@
-RESET:
     adc     r0, r31
     add     r0, r31
     adiw    r25:r24, 63
@@ -27,4 +26,3 @@ RESET:
     sub     r0, r31
     subi    r16, 255
     tst     r0
-    jmp     RESET

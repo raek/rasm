@@ -8,5 +8,5 @@ RESET:              ; comment
 label:; comment
     nop;comment
     
-    jmp     RESET   
+    rjmp    RESET   
 end:    

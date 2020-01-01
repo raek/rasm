@@ -156,9 +156,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("infile", nargs="+")
     parser.add_argument("-o", "--outfile", required=True)
+    parser.add_argument("--vectors", dest="vectors", action="store_true")
+    parser.add_argument("--no-vectors", dest="vectors", action="store_false")
+    parser.set_defaults(vectors=True)
     args = parser.parse_args()
     program = []
-    program += emit_interrupt_vector_table()
+    if args.vectors:
+        program += emit_interrupt_vector_table()
     for infile_name in args.infile:
         with open(infile_name, "rt") as infile:
             program += assemble(infile)

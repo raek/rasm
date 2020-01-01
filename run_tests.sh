@@ -15,7 +15,9 @@ function disassemble() {
 }
 
 function assemble() {
-    python3 rasm.py test/"$1".s -o test_out/"$1".bin || error "assembly failed: test/$1"
+    file="$1"
+    shift
+    python3 rasm.py --no-vectors "$@" test/"$file".s -o test_out/"$file".bin || error "assembly failed: test/$file"
 }
 
 function diff_disassembly() {
@@ -28,21 +30,23 @@ function diff_binary() {
 
 function check_raw() {
     echo "$1"
-    assemble "$1"
+    assemble "$@"
     diff_binary "$1"
 }
 
 function check() {
     echo "$1"
     disassemble test "$1"
-    assemble "$1"
+    assemble "$@"
     disassemble test_out "$1"
     diff_disassembly "$1"
 }
 
+
+check_raw empty
 check syntax
-check empty
-check jumps
+check vectors --vectors
+check jumps --vectors
 check bits
 check mcuctrl
 check arithlog
