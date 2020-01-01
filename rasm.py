@@ -11,7 +11,7 @@ class OperandType:
         self.value_type = value_type
         self.min_value = min_value
         self.max_value = max_value
-        self.post = post or (lambda x: x)
+        self.post = post
         self.offset = offset
 
     def fit_value(self, val, typ, current_addr):
@@ -186,39 +186,6 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
         else:
             raise Exception("Unknown instruction: " + op)
 
-    def words(self):
-        arg1 = self.arg1
-        arg2 = self.arg2
-        arg1_dupe = self.arg1
-        words = []
-        word = 0
-        i = 0
-        for bit_type in reversed(self.bit_pattern):
-            if bit_type == " ":
-                continue
-            elif bit_type == "0":
-                bit = 0
-            elif bit_type == "1":
-                bit = 1
-            elif bit_type == "a":
-                bit = arg1 & 1
-                arg1 >>= 1
-            elif bit_type == "b":
-                bit = arg2 & 1
-                arg2 >>= 1
-            elif bit_type == "A":
-                bit = arg1_dupe & 1
-                arg1_dupe >>= 1
-            else:
-                raise ValueError(bit_type)
-            word |= bit << i
-            i += 1
-            if i == 16:
-                words.insert(0, word)
-                i = 0
-                word = 0
-        return words
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -274,9 +241,7 @@ def parse_arg(arg):
     if m:
         hi_reg = int(m.group(1))
         lo_reg = int(m.group(2))
-        assert hi_reg == lo_reg + 1
-        assert lo_reg % 2 == 0
-        assert lo_reg >= 0 and lo_reg <= 30
+        assert hi_reg == lo_reg + 1 and lo_reg % 2 == 0 and lo_reg >= 0 and lo_reg <= 30
         return Value(lo_reg, ValueType.REG_PAIR)
     m = re.match(r"-?(0|[1-9][0-9]*)$", arg)
     if m:
@@ -312,12 +277,10 @@ def scan(program):
     for stmt in program:
         if isinstance(stmt, Label):
             if stmt.weak:
-                if stmt.symbol in weak_labels:
-                    raise Exception("Weak label mutliply-defined: " + stmt.symbol)
+                assert stmt.symbol not in weak_labels
                 weak_labels[stmt.symbol] = Value(addr, ValueType.NUMBER)
             else:
-                if stmt.symbol in labels:
-                    raise Exception("Label mutliply-defined: " + stmt.symbol)
+                assert stmt.symbol not in labels
                 labels[stmt.symbol] = Value(addr, ValueType.NUMBER)
         elif isinstance(stmt, Insn):
             addr += stmt.size
@@ -332,15 +295,11 @@ def scan(program):
 def fix(program, labels):
     addr = 0
     for stmt in program:
-        if isinstance(stmt, Label):
-            pass
-        elif isinstance(stmt, Insn):
+        if isinstance(stmt, Insn):
             addr += stmt.size
             arg1 = eval_arg(stmt.arg1, labels)
             arg2 = eval_arg(stmt.arg2, labels)
             yield fix_insn(stmt, arg1, arg2, addr)
-        else:
-            raise ValueError(stmt)
 
 
 def eval_arg(arg, env):
@@ -359,12 +318,40 @@ def fix_insn(insn, arg1, arg2, current_addr):
 
 def write_program(outfile, insns):
     for insn in insns:
-        for word in insn.words():
-            write_word(outfile, word)
+        for word in insn_words(insn.bit_pattern, insn.arg1, insn.arg2):
+            outfile.write(struct.pack("<H", word))
 
 
-def write_word(outfile, word):
-    outfile.write(struct.pack("<H", word))
+def insn_words(bit_pattern, arg1, arg2):
+    arg1_dupe = arg1
+    words = []
+    word = 0
+    i = 0
+    for bit_type in reversed(bit_pattern):
+        if bit_type == " ":
+            continue
+        elif bit_type == "0":
+            bit = 0
+        elif bit_type == "1":
+            bit = 1
+        elif bit_type == "a":
+            bit = arg1 & 1
+            arg1 >>= 1
+        elif bit_type == "b":
+            bit = arg2 & 1
+            arg2 >>= 1
+        elif bit_type == "A":
+            bit = arg1_dupe & 1
+            arg1_dupe >>= 1
+        else:
+            raise ValueError(bit_type)
+        word |= bit << i
+        i += 1
+        if i == 16:
+            words.insert(0, word)
+            i = 0
+            word = 0
+    return words
 
 
 if __name__ == "__main__":
