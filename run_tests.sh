@@ -59,4 +59,5 @@ check jumps --vectors
 check arithlog
 check branches
 check bits
+check xfer
 check mcuctrl

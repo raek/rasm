@@ -9,25 +9,29 @@ class ArgType(enum.Enum):
     NONE          =  0
     ADDR          =  1
     ADDR_OFFSET   =  2
-    IO            =  3
-    BIT           =  4
-    REG32         =  5 # r0-r31
-    REG16         =  6 # r16-r31
-    REG8          =  7 # r16-r23
-    REG_PAIR4     =  8 # r25:r24, r27:26, r29:r28, r31:r30
-    IMMEDIATE     =  9
-    IMMEDIATE_INV = 10
+    IO32          =  3
+    IO64          =  4
+    BIT           =  5
+    REG32         =  6 # r0, r1, ..., r31
+    REG16         =  7 # r16, r17, ..., r31
+    REG8          =  8 # r16, r17, ..., r23
+    REG_PAIR16    =  9 # r1:r0, r3:r2, ..., r31:r30
+    REG_PAIR4     = 10 # r25:r24, r27:26, r29:r28, r31:r30
+    IMMEDIATE     = 11
+    IMMEDIATE_INV = 12
 
 
 ARG_TYPE_CHARS = {
     " ": ArgType.NONE,
     "A": ArgType.ADDR,
     "a": ArgType.ADDR_OFFSET,
-    "i": ArgType.IO,
+    "i": ArgType.IO32,
+    "I": ArgType.IO64,
     "b": ArgType.BIT,
     "r": ArgType.REG32,
     "h": ArgType.REG16,
     "H": ArgType.REG8,
+    "p": ArgType.REG_PAIR16,
     "P": ArgType.REG_PAIR4,
     "k": ArgType.IMMEDIATE,
     "K": ArgType.IMMEDIATE_INV,
@@ -36,6 +40,7 @@ ARG_TYPE_CHARS = {
 
 INSTRUCTIONS = {
     "nop":    ("  ", "0000 0000 0000 0000"),
+    "movw":   ("pp", "0000 0001 aaaa bbbb"),
     "muls":   ("hh", "0000 0010 aaaa bbbb"),
     "mulsu":  ("HH", "0000 0011 0aaa 0bbb"),
     "fmulsu": ("HH", "0000 0011 1aaa 1bbb"),
@@ -55,6 +60,7 @@ INSTRUCTIONS = {
     "eor":    ("rr", "0010 01ba aaaa bbbb"),
     "clr":    ("r ", "0010 01Aa aaaa AAAA"),
     "or":     ("rr", "0010 10ba aaaa bbbb"),
+    "mov":    ("rr", "0010 11ba aaaa bbbb"),
     "cpi":    ("hk", "0011 bbbb aaaa bbbb"),
     "sbci":   ("hk", "0100 bbbb aaaa bbbb"),
     "subi":   ("hk", "0101 bbbb aaaa bbbb"),
@@ -62,6 +68,10 @@ INSTRUCTIONS = {
     "sbr":    ("hk", "0110 bbbb aaaa bbbb"),
     "andi":   ("hk", "0111 bbbb aaaa bbbb"),
     "cbr":    ("hK", "0111 bbbb aaaa bbbb"),
+    "lds":    ("rA", "1001 000a aaaa 0000 bbbb bbbb bbbb bbbb"),
+    "pop":    ("r ", "1001 000a aaaa 1111"),
+    "sts":    ("Ar", "1001 001b bbbb 0000 aaaa aaaa aaaa aaaa"),
+    "push":   ("r ", "1001 001a aaaa 1111"),
     "ijmp":   ("  ", "1001 0100 0000 1001"),
     "com":    ("r ", "1001 010a aaaa 0000"),
     "neg":    ("r ", "1001 010a aaaa 0001"),
@@ -104,8 +114,11 @@ INSTRUCTIONS = {
     "sbi":    ("ib", "1001 1010 aaaa abbb"),
     "sbis":   ("ib", "1001 1011 aaaa abbb"),
     "mul":    ("rr", "1001 11ba aaaa bbbb"),
+    "in":     ("rI", "1011 0bba aaaa bbbb"),
+    "out":    ("Ir", "1011 1aab bbbb aaaa"),
     "rjmp":   ("a ", "1100 aaaa aaaa aaaa"),
     "rcall":  ("a ", "1101 aaaa aaaa aaaa"),
+    "ldi":    ("rk", "1110 bbbb aaaa bbbb"),
     "ser":    ("r ", "1110 1111 aaaa 1111"),
     "brbs":   ("ba", "1111 00bb bbbb baaa"),
     "brcs":   ("a ", "1111 00aa aaaa a000"),
@@ -299,10 +312,18 @@ def eval_arg(arg_type, arg, labels, current_addr):
             dest_addr = labels[arg]
             offset = dest_addr - current_addr
         return offset % 0x10000
-    elif arg_type == ArgType.IO:
-        return int(arg)
+    elif arg_type == ArgType.IO32:
+        addr = int(arg)
+        assert addr >= 0 and addr <= 32
+        return addr
+    elif arg_type == ArgType.IO64:
+        addr = int(arg)
+        assert addr >= 0 and addr <= 64
+        return addr
     elif arg_type == ArgType.BIT:
-        return int(arg)
+        value = int(arg)
+        assert value >= 0 and value <= 8
+        return value
     elif arg_type == ArgType.REG32:
         assert arg.startswith("r")
         reg = int(arg[1:])
@@ -318,6 +339,15 @@ def eval_arg(arg_type, arg, labels, current_addr):
         reg = int(arg[1:])
         assert reg >= 16 and reg <= 23
         return reg - 16
+    elif arg_type == ArgType.REG_PAIR16:
+        m = re.match(r"r(\d+):r(\d+)", arg)
+        assert m
+        hreg = int(m.group(1))
+        lreg = int(m.group(2))
+        assert hreg == lreg + 1
+        assert lreg % 2 == 0
+        assert lreg >= 0 and lreg <= 30
+        return lreg >> 1
     elif arg_type == ArgType.REG_PAIR4:
         m = re.match(r"r(\d+):r(\d+)", arg)
         assert m
