@@ -7,6 +7,7 @@
     clr     r0
     com     r0
     dec     r0
+    des     15
     eor     r0, r31
     fmul    r16, r23
     fmuls   r16, r23

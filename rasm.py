@@ -73,6 +73,7 @@ INSTRUCTIONS = {
     "sts":    ("Ar", "1001 001b bbbb 0000 aaaa aaaa aaaa aaaa"),
     "push":   ("r ", "1001 001a aaaa 1111"),
     "ijmp":   ("  ", "1001 0100 0000 1001"),
+    "des":    ("k ", "1001 0100 aaaa 1011"),
     "com":    ("r ", "1001 010a aaaa 0000"),
     "neg":    ("r ", "1001 010a aaaa 0001"),
     "swap":   ("r ", "1001 010a aaaa 0010"),
