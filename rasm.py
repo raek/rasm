@@ -41,9 +41,12 @@ INSTRUCTIONS = {
     "fmulsu": ("HH", "0000 0011 1aaa 1bbb"),
     "fmul":   ("HH", "0000 0011 0aaa 1bbb"),
     "fmuls":  ("HH", "0000 0011 1aaa 0bbb"),
+    "cpc":    ("rr", "0000 01ba aaaa bbbb"),
     "sbc":    ("rr", "0000 10ba aaaa bbbb"),
     "add":    ("rr", "0000 11ba aaaa bbbb"),
     "lsl":    ("r ", "0000 11Aa aaaa AAAA"),
+    "cpse":   ("rr", "0001 00ba aaaa bbbb"),
+    "cp":     ("rr", "0001 0110 0000 1111"),
     "sub":    ("rr", "0001 10ba aaaa bbbb"),
     "adc":    ("rr", "0001 11ba aaaa bbbb"),
     "rol":    ("r ", "0001 11Aa aaaa AAAA"),
@@ -52,12 +55,14 @@ INSTRUCTIONS = {
     "eor":    ("rr", "0010 01ba aaaa bbbb"),
     "clr":    ("r ", "0010 01Aa aaaa AAAA"),
     "or":     ("rr", "0010 10ba aaaa bbbb"),
+    "cpi":    ("hk", "0011 bbbb aaaa bbbb"),
     "sbci":   ("hk", "0100 bbbb aaaa bbbb"),
     "subi":   ("hk", "0101 bbbb aaaa bbbb"),
     "ori":    ("hk", "0110 bbbb aaaa bbbb"),
     "sbr":    ("hk", "0110 bbbb aaaa bbbb"),
     "andi":   ("hk", "0111 bbbb aaaa bbbb"),
     "cbr":    ("hK", "0111 bbbb aaaa bbbb"),
+    "ijmp":   ("  ", "1001 0100 0000 1001"),
     "com":    ("r ", "1001 010a aaaa 0000"),
     "neg":    ("r ", "1001 010a aaaa 0001"),
     "swap":   ("r ", "1001 010a aaaa 0010"),
@@ -67,6 +72,7 @@ INSTRUCTIONS = {
     "ror":    ("r ", "1001 010a aaaa 0111"),
     "dec":    ("r ", "1001 010a aaaa 1010"),
     "jmp":    ("A ", "1001 010a aaaa 110a aaaa aaaa aaaa aaaa"),
+    "call":   ("A ", "1001 010a aaaa 111a aaaa aaaa aaaa aaaa"),
     "bset":   ("b ", "1001 0100 0aaa 1000"),
     "sec":    ("  ", "1001 0100 0000 1000"),
     "sez":    ("  ", "1001 0100 0001 1000"),
@@ -85,18 +91,46 @@ INSTRUCTIONS = {
     "clh":    ("  ", "1001 0100 1101 1000"),
     "clt":    ("  ", "1001 0100 1110 1000"),
     "cli":    ("  ", "1001 0100 1111 1000"),
+    "ret":    ("  ", "1001 0101 0000 1000"),
+    "icall":  ("  ", "1001 0101 0000 1001"),
+    "reti":   ("  ", "1001 0101 0001 1000"),
     "sleep":  ("  ", "1001 0101 1000 1000"),
     "break":  ("  ", "1001 0101 1001 1000"),
     "wdr":    ("  ", "1001 0101 1010 1000"),
     "adiw":   ("Pk", "1001 0110 bbaa bbbb"),
     "sbiw":   ("Pk", "1001 0111 bbaa bbbb"),
     "cbi":    ("ib", "1001 1000 aaaa abbb"),
+    "sbic":   ("ib", "1001 1001 aaaa abbb"),
     "sbi":    ("ib", "1001 1010 aaaa abbb"),
+    "sbis":   ("ib", "1001 1011 aaaa abbb"),
     "mul":    ("rr", "1001 11ba aaaa bbbb"),
     "rjmp":   ("a ", "1100 aaaa aaaa aaaa"),
+    "rcall":  ("a ", "1101 aaaa aaaa aaaa"),
+    "ser":    ("r ", "1110 1111 aaaa 1111"),
+    "brbs":   ("ba", "1111 00bb bbbb baaa"),
+    "brcs":   ("a ", "1111 00aa aaaa a000"),
+    "brlo":   ("a ", "1111 00aa aaaa a000"),
+    "breq":   ("a ", "1111 00aa aaaa a001"),
+    "brmi":   ("a ", "1111 00aa aaaa a010"),
+    "brvs":   ("a ", "1111 00aa aaaa a011"),
+    "brlt":   ("a ", "1111 00aa aaaa a100"),
+    "brhs":   ("a ", "1111 00aa aaaa a101"),
+    "brts":   ("a ", "1111 00aa aaaa a110"),
+    "brie":   ("a ", "1111 00aa aaaa a111"),
+    "brbc":   ("ba", "1111 01bb bbbb baaa"),
+    "brcc":   ("a ", "1111 01aa aaaa a000"),
+    "brsh":   ("a ", "1111 01aa aaaa a000"),
+    "brne":   ("a ", "1111 01aa aaaa a001"),
+    "brpl":   ("a ", "1111 01aa aaaa a010"),
+    "brvc":   ("a ", "1111 01aa aaaa a011"),
+    "brge":   ("a ", "1111 01aa aaaa a100"),
+    "brhc":   ("a ", "1111 01aa aaaa a101"),
+    "brtc":   ("a ", "1111 01aa aaaa a110"),
+    "brid":   ("a ", "1111 01aa aaaa a111"),
     "bld":    ("rb", "1111 100a aaaa 0bbb"),
     "bst":    ("rb", "1111 101a aaaa 0bbb"),
-    "ser":    ("r ", "1110 1111 aaaa 1111"),
+    "sbrc":   ("rb", "1111 110a aaaa 0bbb"),
+    "sbrs":   ("rb", "1111 111a aaaa 0bbb"),
 }
 
 
@@ -183,7 +217,7 @@ def parse_line(line):
     m = re.match(r"(?P<label>\w+):\s*(;.*)?$", line)
     if m:
         return Label(m.group("label"))
-    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>[\w:]+)(,\s*(?P<arg2>[\w:]+))?)?\s*(;.*)?$", line)
+    m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>[\w:-]+)(,\s*(?P<arg2>[\w:-]+))?)?\s*(;.*)?$", line)
     if m:
         return Insn(*m.group("op", "arg1", "arg2"))
     m = re.match(r"\s*(;.*)?$", line)
@@ -253,11 +287,18 @@ def eval_arg(arg_type, arg, labels, current_addr):
         assert arg is None
         return None
     if arg_type == ArgType.ADDR:
-        dest_addr = labels[arg]
+        try:
+            dest_addr = int(arg)
+        except ValueError:
+            dest_addr = labels[arg]
         return dest_addr
     elif arg_type == ArgType.ADDR_OFFSET:
-        dest_addr = labels[arg]
-        return (dest_addr - current_addr) % 0x10000
+        try:
+            offset = int(arg)
+        except:
+            dest_addr = labels[arg]
+            offset = dest_addr - current_addr
+        return offset % 0x10000
     elif arg_type == ArgType.IO:
         return int(arg)
     elif arg_type == ArgType.BIT:

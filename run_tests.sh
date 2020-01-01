@@ -55,6 +55,8 @@ check_raw empty
 check syntax
 check vectors --vectors
 check jumps --vectors
+
+check arithlog
+check branches
 check bits
 check mcuctrl
-check arithlog
