@@ -10,12 +10,24 @@ function error() {
     exit 1
 }
 
+function disassemble() {
+    (cd "$1" && avr-objdump -b binary -m avr -D "$2".bin > "$2"_dis.txt) || error "disassembly failed: $1/$2.bin"
+}
+
+function assemble() {
+    python3 rasm.py test/"$1".s -o test_out/"$1".bin || error "assembly failed: test/$1"
+}
+
+function diff_disassembly() {
+    colordiff -u test/"$1"_dis.txt test_out/"$1"_dis.txt || error "output not correct"
+}
+
 function check() {
     echo "$1"
-    (cd test && avr-objdump -b binary -m avr -D "$1".bin > "$1"_dis.txt) || error "disassembly failed"
-    python3 rasm.py test/"$1".s -o test_out/"$1".bin || error "rasm.py failed"
-    (cd test_out && avr-objdump -b binary -m avr -D "$1".bin > "$1"_dis.txt) || error "disassembly failed"
-    colordiff -u test/"$1"_dis.txt test_out/"$1"_dis.txt || error "output not correct"
+    disassemble test "$1"
+    assemble "$1"
+    disassemble test_out "$1"
+    diff_disassembly "$1"
 }
 
 check syntax
