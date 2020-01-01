@@ -48,6 +48,8 @@ function check() {
     diff_disassembly "$1"
 }
 
+rm -rf test_out/ test/*.bin
+mkdir -p test_out/
 
 check_raw empty
 check syntax
