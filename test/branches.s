@@ -23,6 +23,8 @@
     cpc     r0, r31
     cpi     r16, 255
     cpse    r0, r31
+    eicall
+    eijmp
     icall
     ijmp
     jmp     0
