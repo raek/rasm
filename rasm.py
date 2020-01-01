@@ -5,36 +5,54 @@ import re
 import struct
 
 
-class ArgType(enum.Enum):
-    NONE          =  0
-    ADDR          =  1
-    ADDR_OFFSET   =  2
-    IO32          =  3
-    IO64          =  4
-    BIT           =  5
-    REG32         =  6 # r0, r1, ..., r31
-    REG16         =  7 # r16, r17, ..., r31
-    REG8          =  8 # r16, r17, ..., r23
-    REG_PAIR16    =  9 # r1:r0, r3:r2, ..., r31:r30
-    REG_PAIR4     = 10 # r25:r24, r27:26, r29:r28, r31:r30
-    IMMEDIATE     = 11
-    IMMEDIATE_INV = 12
+class OperandType:
+
+    def __init__(self, name, value_type, min_value=None, max_value=None, post=None, offset=False):
+        self.value_type = value_type
+        self.min_value = min_value
+        self.max_value = max_value
+        self.post = post or (lambda x: x)
+        self.offset = offset
+
+    def fit_value(self, val, typ, current_addr):
+        assert typ == self.value_type
+        if self.min_value is not None:
+            assert val >= self.min_value
+        if self.max_value is not None:
+            assert val <= self.max_value
+        if self.offset:
+            val -= current_addr
+        if self.post is not None:
+            return self.post(val)
+        else:
+            return val
 
 
-ARG_TYPE_CHARS = {
-    " ": ArgType.NONE,
-    "A": ArgType.ADDR,
-    "a": ArgType.ADDR_OFFSET,
-    "i": ArgType.IO32,
-    "I": ArgType.IO64,
-    "b": ArgType.BIT,
-    "r": ArgType.REG32,
-    "h": ArgType.REG16,
-    "H": ArgType.REG8,
-    "p": ArgType.REG_PAIR16,
-    "P": ArgType.REG_PAIR4,
-    "k": ArgType.IMMEDIATE,
-    "K": ArgType.IMMEDIATE_INV,
+class ValueType(enum.Enum):
+    NONE     = 0
+    REG      = 1
+    REG_PAIR = 2
+    NUMBER   = 3
+    IDENT    = 4
+
+
+Value = collections.namedtuple("Value", ["val", "typ"])
+
+
+OPERAND_TYPES = {
+    " ": OperandType("NONE",        ValueType.NONE),
+    "A": OperandType("ADDR",        ValueType.NUMBER),
+    "a": OperandType("ADDR_OFFSET", ValueType.NUMBER,           post=(lambda x: x%0x10000), offset=True),
+    "i": OperandType("IO32",        ValueType.NUMBER,    0, 31),
+    "I": OperandType("IO64",        ValueType.NUMBER,    0, 63),
+    "b": OperandType("BIT",         ValueType.NUMBER,    0, 7),
+    "r": OperandType("REG32",       ValueType.REG,       0, 31),
+    "h": OperandType("REG16",       ValueType.REG,      16, 31, post=lambda x: x-16),
+    "H": OperandType("REG8",        ValueType.REG,      16, 23, post=lambda x: x-16),
+    "p": OperandType("REG_PAIR16",  ValueType.REG_PAIR,  0, 30, post=lambda x: x>>1),
+    "P": OperandType("REG_PAIR4",   ValueType.REG_PAIR, 24, 30, post=lambda x: x>>1),
+    "k": OperandType("IMM",         ValueType.NUMBER),
+    "K": OperandType("IMM_INV",     ValueType.NUMBER,           post=lambda x: 0xFF-x),
 }
 
 
@@ -156,15 +174,15 @@ class Label(collections.namedtuple("Label", ["symbol", "weak"])):
         return super(Label, cls).__new__(cls, symbol, weak)
 
 
-class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", "size", "arg1_type", "arg2_type"])):
+class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", "size", "operand1_type", "operand2_type"])):
 
-    def __new__(cls, op, arg1=None, arg2=None):
+    def __new__(cls, op, arg1=Value(None, ValueType.NONE), arg2=Value(None, ValueType.NONE)):
         if op in INSTRUCTIONS:
-            arg_types, bit_pattern = INSTRUCTIONS[op]
-            arg1_type = ARG_TYPE_CHARS[arg_types[0]]
-            arg2_type = ARG_TYPE_CHARS[arg_types[1]]
+            operand_types, bit_pattern = INSTRUCTIONS[op]
+            operand1_type = OPERAND_TYPES[operand_types[0]]
+            operand2_type = OPERAND_TYPES[operand_types[1]]
             size = len(bit_pattern) // 16
-            return super(Insn, cls).__new__(cls, op, arg1, arg2, bit_pattern, size, arg1_type, arg2_type)
+            return super(Insn, cls).__new__(cls, op, arg1, arg2, bit_pattern, size, operand1_type, operand2_type)
         else:
             raise Exception("Unknown instruction: " + op)
 
@@ -235,24 +253,51 @@ def parse_line(line):
         return Label(m.group("label"))
     m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>[\w:-]+)(,\s*(?P<arg2>[\w:-]+))?)?\s*(;.*)?$", line)
     if m:
-        return Insn(*m.group("op", "arg1", "arg2"))
+        arg1 = parse_arg(m.group("arg1"))
+        arg2 = parse_arg(m.group("arg2"))
+        return Insn(m.group("op"), arg1, arg2)
     m = re.match(r"\s*(;.*)?$", line)
     if m:
         return None
     raise Exception("syntax error: " + line)
 
 
+def parse_arg(arg):
+    if arg is None:
+        return Value(None, ValueType.NONE)
+    m = re.match(r"r(\d+)$", arg)
+    if m:
+        reg = int(m.group(1))
+        assert reg >= 0 and reg <= 31
+        return Value(reg, ValueType.REG)
+    m = re.match(r"r(\d+):r(\d+)$", arg)
+    if m:
+        hi_reg = int(m.group(1))
+        lo_reg = int(m.group(2))
+        assert hi_reg == lo_reg + 1
+        assert lo_reg % 2 == 0
+        assert lo_reg >= 0 and lo_reg <= 30
+        return Value(lo_reg, ValueType.REG_PAIR)
+    m = re.match(r"-?(0|[1-9][0-9]*)$", arg)
+    if m:
+        return Value(int(arg), ValueType.NUMBER)
+    m = re.match(r"[A-Za-z_][0-9A-Za-z_]*$", arg)
+    if m:
+        return Value(arg, ValueType.IDENT)
+    raise Exception("expression syntax error: " + arg)
+
+
 def emit_interrupt_vector_table():
     interrupts = 26
     # Interrupt vector table
     yield Label("__vectors")
-    yield Insn("jmp", "RESET")
+    yield Insn("jmp", Value("RESET", ValueType.IDENT))
     for _ in range(interrupts-1):
-        yield Insn("jmp", "__bad_interrupt")
+        yield Insn("jmp", Value("__bad_interrupt", ValueType.IDENT))
     # Bad interrupt handler
     yield Label("__bad_interrupt")
     yield Label("RESET", weak=True)
-    yield Insn("jmp", "__vectors")
+    yield Insn("jmp", Value("__vectors", ValueType.IDENT))
 
 
 def link(program):
@@ -269,11 +314,11 @@ def scan(program):
             if stmt.weak:
                 if stmt.symbol in weak_labels:
                     raise Exception("Weak label mutliply-defined: " + stmt.symbol)
-                weak_labels[stmt.symbol] = addr
+                weak_labels[stmt.symbol] = Value(addr, ValueType.NUMBER)
             else:
                 if stmt.symbol in labels:
                     raise Exception("Label mutliply-defined: " + stmt.symbol)
-                labels[stmt.symbol] = addr
+                labels[stmt.symbol] = Value(addr, ValueType.NUMBER)
         elif isinstance(stmt, Insn):
             addr += stmt.size
         else:
@@ -291,85 +336,25 @@ def fix(program, labels):
             pass
         elif isinstance(stmt, Insn):
             addr += stmt.size
-            arg1 = eval_arg(stmt.arg1_type, stmt.arg1, labels, addr)
-            arg2 = eval_arg(stmt.arg2_type, stmt.arg2, labels, addr)
-            yield stmt._replace(arg1=arg1, arg2=arg2)
+            arg1 = eval_arg(stmt.arg1, labels)
+            arg2 = eval_arg(stmt.arg2, labels)
+            yield fix_insn(stmt, arg1, arg2, addr)
         else:
             raise ValueError(stmt)
 
 
-def eval_arg(arg_type, arg, labels, current_addr):
-    if arg_type == ArgType.NONE:
-        assert arg is None
-        return None
-    if arg_type == ArgType.ADDR:
-        try:
-            dest_addr = int(arg)
-        except ValueError:
-            dest_addr = labels[arg]
-        return dest_addr
-    elif arg_type == ArgType.ADDR_OFFSET:
-        try:
-            offset = int(arg)
-        except:
-            dest_addr = labels[arg]
-            offset = dest_addr - current_addr
-        return offset % 0x10000
-    elif arg_type == ArgType.IO32:
-        addr = int(arg)
-        assert addr >= 0 and addr <= 32
-        return addr
-    elif arg_type == ArgType.IO64:
-        addr = int(arg)
-        assert addr >= 0 and addr <= 64
-        return addr
-    elif arg_type == ArgType.BIT:
-        value = int(arg)
-        assert value >= 0 and value <= 8
-        return value
-    elif arg_type == ArgType.REG32:
-        assert arg.startswith("r")
-        reg = int(arg[1:])
-        assert reg >= 0 and reg <= 31
-        return reg
-    elif arg_type == ArgType.REG16:
-        assert arg.startswith("r")
-        reg = int(arg[1:])
-        assert reg >= 16 and reg <= 31
-        return reg - 16
-    elif arg_type == ArgType.REG8:
-        assert arg.startswith("r")
-        reg = int(arg[1:])
-        assert reg >= 16 and reg <= 23
-        return reg - 16
-    elif arg_type == ArgType.REG_PAIR16:
-        m = re.match(r"r(\d+):r(\d+)", arg)
-        assert m
-        hreg = int(m.group(1))
-        lreg = int(m.group(2))
-        assert hreg == lreg + 1
-        assert lreg % 2 == 0
-        assert lreg >= 0 and lreg <= 30
-        return lreg >> 1
-    elif arg_type == ArgType.REG_PAIR4:
-        m = re.match(r"r(\d+):r(\d+)", arg)
-        assert m
-        hreg = int(m.group(1))
-        lreg = int(m.group(2))
-        assert hreg == lreg + 1
-        assert lreg in [24, 26, 28, 30]
-        return (lreg - 24) >> 1
-    elif arg_type == ArgType.IMMEDIATE:
-        val = int(arg)
-        assert val >= 0 and val <= 255
-        return val
-    elif arg_type == ArgType.IMMEDIATE_INV:
-        val = int(arg)
-        assert val >= 0 and val <= 255
-        val = 255 - val
-        return val
+def eval_arg(arg, env):
+    if arg.typ == ValueType.IDENT:
+        assert arg.val in env
+        return env[arg.val]
     else:
-        raise ValueError(arg_type)
+        return arg
+
+
+def fix_insn(insn, arg1, arg2, current_addr):
+    op1 = insn.operand1_type.fit_value(arg1.val, arg1.typ, current_addr)
+    op2 = insn.operand2_type.fit_value(arg2.val, arg2.typ, current_addr)
+    return insn._replace(arg1=op1, arg2=op2)
 
 
 def write_program(outfile, insns):
