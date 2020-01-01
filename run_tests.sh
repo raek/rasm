@@ -22,6 +22,16 @@ function diff_disassembly() {
     colordiff -u test/"$1"_dis.txt test_out/"$1"_dis.txt || error "output not correct"
 }
 
+function diff_binary() {
+    cmp test/"$1".bin test_out/"$1".bin || error "output not correct"
+}
+
+function check_raw() {
+    echo "$1"
+    assemble "$1"
+    diff_binary "$1"
+}
+
 function check() {
     echo "$1"
     disassemble test "$1"
