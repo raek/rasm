@@ -1,2 +1,3 @@
+/test/*_dis.txt
+/test/*.bin
 /test_out
-*_dis.txt

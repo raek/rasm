@@ -10,6 +10,10 @@ function error() {
     exit 1
 }
 
+function hex2bin() {
+    xxd -r test/"$1"_hex.txt > test/"$1".bin
+}
+
 function disassemble() {
     (cd "$1" && avr-objdump -b binary -m avr -D "$2".bin > "$2"_dis.txt) || error "disassembly failed: $1/$2.bin"
 }
@@ -30,12 +34,14 @@ function diff_binary() {
 
 function check_raw() {
     echo "$1"
+    hex2bin "$1"
     assemble "$@"
     diff_binary "$1"
 }
 
 function check() {
     echo "$1"
+    hex2bin "$1"
     disassemble test "$1"
     assemble "$@"
     disassemble test_out "$1"
