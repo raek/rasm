@@ -1,6 +1,6 @@
 RESET:
-    rjmp    forth
+        rjmp    forth
 back:
-    jmp     back
+        jmp     back
 forth:
-    rjmp    back
+        rjmp    back

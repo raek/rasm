@@ -1,3 +1,3 @@
 RESET:
-    nop
-    jmp     RESET
+        nop
+        jmp     RESET
