@@ -20,3 +20,10 @@ label:
 ; Order of definition and usage does not matter
         ldi     r1, defined_later
 .equ defined_later = 2
+
+; Fallback values
+.default default_a = 3
+        ldi     r1, default_a
+.default default_b = 4
+.equ default_b = 5
+        ldi     r1, default_b

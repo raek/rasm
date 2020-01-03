@@ -187,7 +187,7 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
             raise Exception("Unknown instruction: " + op)
 
 
-Equ = collections.namedtuple("Equ", ["var", "expr"])
+Equ = collections.namedtuple("Equ", ["var", "expr", "weak"])
 
 
 def main():
@@ -226,10 +226,11 @@ def parse_line(line):
         arg1 = parse_expr(m.group("arg1"))
         arg2 = parse_expr(m.group("arg2"))
         return Insn(m.group("op"), arg1, arg2)
-    m = re.match(r".equ\s+(?P<var>[A-Za-z_][0-9A-Za-z_]*)\s*=\s*(?P<expr>.*?)\s*(;.*)?$", line)
+    m = re.match(r".(?P<dir>equ|default)\s+(?P<var>[A-Za-z_][0-9A-Za-z_]*)\s*=\s*(?P<expr>.*?)\s*(;.*)?$", line)
     if m:
         expr = parse_expr(m.group("expr"))
-        return Equ(m.group("var"), expr)
+        weak = {"equ": False, "default": True}[m.group("dir")]
+        return Equ(m.group("var"), expr, weak)
     m = re.match(r"\s*(;.*)?$", line)
     if m:
         return None
@@ -294,8 +295,12 @@ def scan(program):
         elif isinstance(stmt, Insn):
             addr += stmt.size
         elif isinstance(stmt, Equ):
-            assert stmt.var not in labels
-            labels[stmt.var] = stmt.expr
+            if stmt.weak:
+                assert stmt.var not in weak_labels
+                weak_labels[stmt.var] = stmt.expr
+            else:
+                assert stmt.var not in labels
+                labels[stmt.var] = stmt.expr
         else:
             raise ValueError(stmt)
     result = dict(weak_labels)
