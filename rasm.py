@@ -248,7 +248,9 @@ def parse_expr(arg):
     if m:
         hi_reg = int(m.group(1))
         lo_reg = int(m.group(2))
-        assert hi_reg == lo_reg + 1 and lo_reg % 2 == 0 and lo_reg >= 0 and lo_reg <= 30
+        assert hi_reg == lo_reg + 1
+        assert lo_reg % 2 == 0
+        assert lo_reg >= 0 and lo_reg <= 30
         return Value(lo_reg, ValueType.REG_PAIR)
     m = re.match(r"-?(0|[1-9][0-9]*)$", arg)
     if m:
