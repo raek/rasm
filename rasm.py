@@ -266,12 +266,12 @@ def emit_interrupt_vector_table():
     interrupts = 26
     # Interrupt vector table
     yield Label("__vectors")
+    yield Equ("RESET", Value("__bad_interrupt", ValueType.IDENT), weak=True)
     yield Insn("jmp", Value("RESET", ValueType.IDENT))
     for _ in range(interrupts-1):
         yield Insn("jmp", Value("__bad_interrupt", ValueType.IDENT))
     # Bad interrupt handler
     yield Label("__bad_interrupt")
-    yield Label("RESET", weak=True)
     yield Insn("jmp", Value("__vectors", ValueType.IDENT))
 
 
