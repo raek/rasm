@@ -55,6 +55,7 @@ check_raw empty
 check syntax
 check vectors --vectors
 check jumps --vectors
+check variables
 
 check arithlog
 check branches

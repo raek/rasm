@@ -187,6 +187,9 @@ class Insn(collections.namedtuple("Insn", ["op", "arg1", "arg2", "bit_pattern", 
             raise Exception("Unknown instruction: " + op)
 
 
+Equ = collections.namedtuple("Equ", ["var", "expr"])
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("infile", nargs="+")
@@ -220,16 +223,20 @@ def parse_line(line):
         return Label(m.group("label"))
     m = re.match(r"\s+(?P<op>\w+)(\s+(?P<arg1>[\w:-]+)(,\s*(?P<arg2>[\w:-]+))?)?\s*(;.*)?$", line)
     if m:
-        arg1 = parse_arg(m.group("arg1"))
-        arg2 = parse_arg(m.group("arg2"))
+        arg1 = parse_expr(m.group("arg1"))
+        arg2 = parse_expr(m.group("arg2"))
         return Insn(m.group("op"), arg1, arg2)
+    m = re.match(r".equ\s+(?P<var>[A-Za-z_][0-9A-Za-z_]*)\s*=\s*(?P<expr>.*?)\s*(;.*)?$", line)
+    if m:
+        expr = parse_expr(m.group("expr"))
+        return Equ(m.group("var"), expr)
     m = re.match(r"\s*(;.*)?$", line)
     if m:
         return None
     raise Exception("syntax error: " + line)
 
 
-def parse_arg(arg):
+def parse_expr(arg):
     if arg is None:
         return Value(None, ValueType.NONE)
     m = re.match(r"r(\d+)$", arg)
@@ -284,6 +291,9 @@ def scan(program):
                 labels[stmt.symbol] = Value(addr, ValueType.NUMBER)
         elif isinstance(stmt, Insn):
             addr += stmt.size
+        elif isinstance(stmt, Equ):
+            assert stmt.var not in labels
+            labels[stmt.var] = stmt.expr
         else:
             raise ValueError(stmt)
     result = dict(weak_labels)
@@ -305,7 +315,7 @@ def fix(program, labels):
 def eval_arg(arg, env):
     if arg.typ == ValueType.IDENT:
         assert arg.val in env
-        return env[arg.val]
+        return eval_arg(env[arg.val], env)
     else:
         return arg
 
