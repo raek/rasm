@@ -32,6 +32,9 @@ class ValueType(enum.Enum):
     NONE     = 0
     REG      = 1
     REG_PAIR = 2
+    XREG     = 6
+    YREG     = 7
+    ZREG     = 8
     NUMBER   = 3
     IDENT    = 4
 
@@ -51,6 +54,9 @@ OPERAND_TYPES = {
     "H": OperandType("REG8",        ValueType.REG,      16, 23, post=lambda x: x-16),
     "p": OperandType("REG_PAIR16",  ValueType.REG_PAIR,  0, 30, post=lambda x: x>>1),
     "P": OperandType("REG_PAIR4",   ValueType.REG_PAIR, 24, 30, post=lambda x: x>>1),
+    "x": OperandType("X",           ValueType.XREG),
+    "y": OperandType("Y",           ValueType.YREG),
+    "z": OperandType("Z",           ValueType.ZREG),
     "k": OperandType("IMM",         ValueType.NUMBER),
     "K": OperandType("IMM_INV",     ValueType.NUMBER,           post=lambda x: 0xFF-x),
 }
@@ -86,9 +92,19 @@ INSTRUCTION_SPECS = [
     ("sbr",    "hk", "0110 bbbb aaaa bbbb"),
     ("andi",   "hk", "0111 bbbb aaaa bbbb"),
     ("cbr",    "hK", "0111 bbbb aaaa bbbb"),
+    ("ld",     "rz", "1000 000a aaaa 0000"),
+    ("ld",     "ry", "1000 000a aaaa 1000"),
+    ("st",     "zr", "1000 001b bbbb 0000"),
+    ("st",     "yr", "1000 001b bbbb 1000"),
     ("lds",    "rA", "1001 000a aaaa 0000 bbbb bbbb bbbb bbbb"),
+    ("ld",     "rx", "1001 000a aaaa 1100"),
     ("pop",    "r ", "1001 000a aaaa 1111"),
     ("sts",    "Ar", "1001 001b bbbb 0000 aaaa aaaa aaaa aaaa"),
+    ("xch",    "zr", "1001 001b bbbb 0100"),
+    ("lac",    "zr", "1001 001b bbbb 0110"),
+    ("las",    "zr", "1001 001b bbbb 0101"),
+    ("lat",    "zr", "1001 001b bbbb 0111"),
+    ("st",     "xr", "1001 001b bbbb 1100"),
     ("push",   "r ", "1001 001a aaaa 1111"),
     ("ijmp",   "  ", "1001 0100 0000 1001"),
     ("des",    "k ", "1001 0100 aaaa 1011"),
@@ -265,6 +281,12 @@ def parse_expr(arg):
         assert lo_reg % 2 == 0
         assert lo_reg >= 0 and lo_reg <= 30
         return Value(lo_reg, ValueType.REG_PAIR)
+    if arg == "x":
+        return Value(None, ValueType.XREG)
+    if arg == "y":
+        return Value(None, ValueType.YREG)
+    if arg == "z":
+        return Value(None, ValueType.ZREG)
     m = re.match(r"-?(0|[1-9][0-9]*)$", arg)
     if m:
         return Value(int(arg), ValueType.NUMBER)

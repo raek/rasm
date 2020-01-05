@@ -2,16 +2,16 @@
 ;       elpm    r31, z
 ;       elpm    r31, z+
         in      r0, 63
-;       lac     r31, z
-;       las     r31, z
-;       lat     r31, z
-;       ld      r0, x
+        lac     z, r0
+        las     z, r0
+        lat     z, r0
+        ld      r0, x
 ;       ld      r0, x+
 ;       ld      r0, -x
-;       ld      r0, y
+        ld      r0, y
 ;       ld      r0, y+
 ;       ld      r0, -y
-;       ld      r0, z
+        ld      r0, z
 ;       ld      r0, z+
 ;       ld      r0, -z
 ;       ldd     r0, y+63
@@ -26,16 +26,16 @@
         out     63, r0
         pop     r0
         push    r0
-;       st      x, r0
+        st      x, r0
 ;       st      x+, r0
 ;       st      -x, r0
-;       st      y, r0
+        st      y, r0
 ;       st      y+, r0
 ;       st      -y, r0
-;       st      z, r0
+        st      z, r0
 ;       st      z+, r0
 ;       st      -z, r0
 ;       std     y+63, r0
 ;       std     z+63, r0
         sts     0, r31
-;       xch     z, r31
+        xch     z, r0
