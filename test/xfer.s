@@ -1,6 +1,6 @@
-;       elpm
-;       elpm    r31, z
-;       elpm    r31, z+
+        elpm
+        elpm    r0, z
+;       elpm    r0, z+
         in      r0, 63
         lac     z, r0
         las     z, r0
@@ -18,9 +18,9 @@
 ;       ldd     r0, z+63
         ldi     r0, 255
         lds     r31, 0
-;       lpm
-;       lpm     r31, z
-;       lpm     r31, z+
+        lpm
+        lpm     r0, z
+;       lpm     r0, z+
         mov     r0, r31
         movw    r1:r0, r31:r30
         out     63, r0
