@@ -25,20 +25,22 @@ class OperandType(collections.namedtuple("OperandType", ["name", "value_type", "
 
 
 class ValueType(enum.Enum):
-    NONE     =  0
-    REG      =  1
-    REG_PAIR =  2
-    XREG     =  3
-    XREG_INC =  4
-    XREG_DEC =  5
-    YREG     =  6
-    YREG_INC =  7
-    YREG_DEC =  8
-    ZREG     =  9
-    ZREG_INC = 10
-    ZREG_DEC = 11
-    NUMBER   = 12
-    IDENT    = 13
+    NONE      =  0
+    REG       =  1
+    REG_PAIR  =  2
+    XREG      =  3
+    XREG_INC  =  4
+    XREG_DEC  =  5
+    YREG      =  6
+    YREG_INC  =  7
+    YREG_DEC  =  8
+    YREG_DISP =  9
+    ZREG      = 10
+    ZREG_INC  = 12
+    ZREG_DEC  = 13
+    ZREG_DISP = 14
+    NUMBER    = 15
+    IDENT     = 16
 
 
 Value = collections.namedtuple("Value", ["val", "typ"])
@@ -62,9 +64,11 @@ OPERAND_TYPES = {
     "y": OperandType("YREG",        ValueType.YREG),
     "v": OperandType("YREG_INC",    ValueType.YREG_INC),
     "V": OperandType("YREG_DEC",    ValueType.YREG_DEC),
+    "Y": OperandType("YREG_DISP",   ValueType.YREG_DISP, 0, 63),
     "z": OperandType("ZREG",        ValueType.ZREG),
     "w": OperandType("ZREG_INC",    ValueType.ZREG_INC),
     "W": OperandType("ZREG_DEC",    ValueType.ZREG_DEC),
+    "Z": OperandType("ZREG_DISP",   ValueType.ZREG_DISP, 0, 63),
     "k": OperandType("IMM",         ValueType.NUMBER),
     "K": OperandType("IMM_INV",     ValueType.NUMBER,           post=lambda x: 0xFF-x),
 }
@@ -100,6 +104,10 @@ INSTRUCTION_SPECS = [
     ("sbr",    "hk", "0110 bbbb aaaa bbbb"),
     ("andi",   "hk", "0111 bbbb aaaa bbbb"),
     ("cbr",    "hK", "0111 bbbb aaaa bbbb"),
+    ("ldd",    "rZ", "10b0 bb0a aaaa 0bbb"),
+    ("std",    "Zr", "10a0 aa1b bbbb 0aaa"),
+    ("ldd",    "rY", "10b0 bb0a aaaa 1bbb"),
+    ("std",    "Yr", "10a0 aa1b bbbb 1aaa"),
     ("ld",     "rz", "1000 000a aaaa 0000"),
     ("ld",     "ry", "1000 000a aaaa 1000"),
     ("st",     "zr", "1000 001b bbbb 0000"),
@@ -320,6 +328,16 @@ def parse_expr(arg):
         assert lo_reg % 2 == 0
         assert lo_reg >= 0 and lo_reg <= 30
         return Value(lo_reg, ValueType.REG_PAIR)
+    m = re.match(r"([yz])\+(0|[1-9][0-9]*)", arg)
+    if m:
+        types = {
+            "y": ValueType.YREG_DISP,
+            "z": ValueType.ZREG_DISP,
+        }
+        reg = m.group(1)
+        disp = int(m.group(2))
+        assert disp >= 0 and disp <= 63
+        return Value(disp, types[reg])
     m = re.match(r"-?(0|[1-9][0-9]*)$", arg)
     if m:
         return Value(int(arg), ValueType.NUMBER)

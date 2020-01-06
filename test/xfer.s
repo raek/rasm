@@ -14,8 +14,8 @@
         ld      r0, z
         ld      r0, z+
         ld      r0, -z
-;       ldd     r0, y+63
-;       ldd     r0, z+63
+        ldd     r0, y+63
+        ldd     r0, z+63
         ldi     r0, 255
         lds     r31, 0
         lpm
@@ -35,7 +35,7 @@
         st      z, r0
         st      z+, r0
         st      -z, r0
-;       std     y+63, r0
-;       std     z+63, r0
+        std     y+63, r0
+        std     z+63, r0
         sts     0, r31
         xch     z, r0
