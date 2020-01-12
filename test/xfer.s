@@ -26,6 +26,8 @@
         out     63, r0
         pop     r0
         push    r0
+        spm
+        spm     z+
         st      x, r0
         st      x+, r0
         st      -x, r0
