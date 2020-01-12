@@ -15,15 +15,15 @@ label:
 
 ; Constants
 .equ loops = 100
-        ldi     r1, loops
+        ldi     r17, loops
 
 ; Order of definition and usage does not matter
-        ldi     r1, defined_later
+        ldi     r17, defined_later
 .equ defined_later = 2
 
 ; Fallback values
 .default default_a = 3
-        ldi     r1, default_a
+        ldi     r17, default_a
 .default default_b = 4
 .equ default_b = 5
-        ldi     r1, default_b
+        ldi     r17, default_b

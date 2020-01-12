@@ -23,7 +23,7 @@
         sbci    r16, 255
         sbiw    r25:r24, 63
         sbr     r16, 255
-        ser     r0
+        ser     r16
         sub     r0, r31
         subi    r16, 255
         tst     r0

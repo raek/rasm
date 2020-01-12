@@ -16,7 +16,7 @@
         ld      r0, -z
         ldd     r0, y+63
         ldd     r0, z+63
-        ldi     r0, 255
+        ldi     r16, 255
         lds     r31, 0
         lpm
         lpm     r0, z
