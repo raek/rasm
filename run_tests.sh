@@ -21,7 +21,7 @@ function disassemble() {
 function assemble() {
     file="$1"
     shift
-    python3 rasm.py --no-vectors "$@" test/"$file".s -o test_out/"$file".bin || error "assembly failed: test/$file"
+    rasm --no-vectors "$@" test/"$file".s -o test_out/"$file".bin || error "assembly failed: test/$file"
 }
 
 function diff_disassembly() {

@@ -1,3 +1,5 @@
+/build
 /test/*_dis.txt
 /test/*.bin
 /test_out
+*.egg-info
