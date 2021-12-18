@@ -1,5 +1,7 @@
 /build
+/dist
 /test/*_dis.txt
 /test/*.bin
 /test_out
 *.egg-info
+__pycache__

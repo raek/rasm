@@ -10,7 +10,7 @@ This is an 8-bit AVR assembler I wrote for myself.
 
 See the help from the command:
 
-    python3 rasm.py --help
+    rasm --help
 
 ## Development
 
