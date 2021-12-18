@@ -5,7 +5,7 @@ import re
 import struct
 
 
-class OperandType(collections.namedtuple("OperandType", ["name", "value_type", "min_value", "max_value", "post", "offset"])):
+class OperandType(collections.namedtuple("OperandType", "name, value_type, min_value, max_value, post, offset")):
 
     def __new__(cls, name, value_type, min_value=None, max_value=None, post=None, offset=False):
         return super(OperandType, cls).__new__(cls, name, value_type, min_value, max_value, post, offset)
@@ -49,15 +49,15 @@ Value = collections.namedtuple("Value", ["val", "typ"])
 OPERAND_TYPES = {
     " ": OperandType("NONE",        ValueType.NONE),
     "A": OperandType("ADDR",        ValueType.NUMBER),
-    "a": OperandType("ADDR_OFFSET", ValueType.NUMBER,           post=(lambda x: x%0x10000), offset=True),
+    "a": OperandType("ADDR_OFFSET", ValueType.NUMBER,           post=(lambda x: x % 0x10000), offset=True),
     "i": OperandType("IO32",        ValueType.NUMBER,    0, 31),
     "I": OperandType("IO64",        ValueType.NUMBER,    0, 63),
     "b": OperandType("BIT",         ValueType.NUMBER,    0, 7),
     "r": OperandType("REG32",       ValueType.REG,       0, 31),
-    "h": OperandType("REG16",       ValueType.REG,      16, 31, post=lambda x: x-16),
-    "H": OperandType("REG8",        ValueType.REG,      16, 23, post=lambda x: x-16),
-    "p": OperandType("REG_PAIR16",  ValueType.REG_PAIR,  0, 30, post=lambda x: x>>1),
-    "P": OperandType("REG_PAIR4",   ValueType.REG_PAIR, 24, 30, post=lambda x: x>>1),
+    "h": OperandType("REG16",       ValueType.REG,      16, 31, post=lambda x: x - 16),
+    "H": OperandType("REG8",        ValueType.REG,      16, 23, post=lambda x: x - 16),
+    "p": OperandType("REG_PAIR16",  ValueType.REG_PAIR,  0, 30, post=lambda x: x >> 1),
+    "P": OperandType("REG_PAIR4",   ValueType.REG_PAIR, 24, 30, post=lambda x: x >> 1),
     "x": OperandType("XREG",        ValueType.XREG),
     "u": OperandType("XREG_INC",    ValueType.XREG_INC),
     "U": OperandType("XREG_DEC",    ValueType.XREG_DEC),
@@ -70,7 +70,7 @@ OPERAND_TYPES = {
     "W": OperandType("ZREG_DEC",    ValueType.ZREG_DEC),
     "Z": OperandType("ZREG_DISP",   ValueType.ZREG_DISP, 0, 63),
     "k": OperandType("IMM",         ValueType.NUMBER),
-    "K": OperandType("IMM_INV",     ValueType.NUMBER,           post=lambda x: 0xFF-x),
+    "K": OperandType("IMM_INV",     ValueType.NUMBER,           post=lambda x: 0xFF - x),
 }
 
 
@@ -355,7 +355,7 @@ def emit_interrupt_vector_table():
     yield Label("__vectors")
     yield Equ("RESET", Value("__bad_interrupt", ValueType.IDENT), weak=True)
     yield Insn("jmp", Value("RESET", ValueType.IDENT))
-    for _ in range(interrupts-1):
+    for _ in range(interrupts - 1):
         yield Insn("jmp", Value("__bad_interrupt", ValueType.IDENT))
     # Bad interrupt handler
     yield Label("__bad_interrupt")
